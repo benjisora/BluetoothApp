@@ -1,31 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="amiltone.bsaugues.bluetoothapp.presentation.ui.activity.MainActivity"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="amiltone.bsaugues.bluetoothapp.presentation.ui.activity.MainActivity">
 
     <TextView
         android:id="@+id/activity_main_device_discovered"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorAccent"
-        android:text="discovered..." />
+        android:text="@string/activity_main_no_device_connected" />
 
     <TextView
-        android:id="@+id/activity_main_device_name"
+        android:id="@+id/activity_main_discovery_list_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!"/>
+        android:text="@string/activity_main_available_devices"
+        android:textSize="24sp"
+        android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/activity_main_device_address"
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/activity_main_device_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/activity_main_device_send_command_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!" />
-
+        android:text="@string/activity_main_send_data_button" />
 
 
 </LinearLayout>

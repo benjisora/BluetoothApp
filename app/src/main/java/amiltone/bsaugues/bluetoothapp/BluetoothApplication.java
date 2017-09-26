@@ -2,9 +2,8 @@ package amiltone.bsaugues.bluetoothapp;
 
 import android.app.Application;
 
-import amiltone.bsaugues.bluetoothapp.data.ContentRepository;
+import amiltone.bsaugues.bluetoothapp.data.repository.ContentRepository;
 import amiltone.bsaugues.bluetoothapp.data.manager.bluetooth.BluetoothManagerImpl;
-import amiltone.bsaugues.bluetoothapp.data.manager.bluetooth.IOTBluetoothManager;
 
 /**
  * Created by amiltonedev_dt013 on 25/09/2017.
@@ -19,7 +18,7 @@ public class BluetoothApplication extends Application {
     public void onCreate() {
         super.onCreate();
         ourInstance = this;
-        this.contentRepository = new ContentRepository(new BluetoothManagerImpl(getApplicationContext()));
+        this.contentRepository = new ContentRepository(new BluetoothManagerImpl(this));
     }
 
     public BluetoothApplication() {

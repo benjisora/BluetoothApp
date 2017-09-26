@@ -2,6 +2,7 @@ package amiltone.bsaugues.bluetoothapp.data.manager.bluetooth;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.util.Log;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,7 +49,6 @@ public class BluetoothManagerImpl implements BluetoothManager {
                     iotBluetoothManager.addBluetoothManagerDiscoveryListener(new BluetoothManagerDiscoveryListener() {
                         @Override
                         public void bluetoothDeviceFound(BluetoothDevice bluetoothDevice) {
-
                             bluetoothDeviceMap.put(bluetoothDevice.getAddress(), bluetoothDevice);
                             subscriber.onNext(bluetoothDevice);
                         }

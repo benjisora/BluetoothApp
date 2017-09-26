@@ -7,10 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import amiltone.bsaugues.bluetoothapp.BluetoothApplication;
-import amiltone.bsaugues.bluetoothapp.data.ContentRepository;
 import amiltone.bsaugues.bluetoothapp.data.entity.BluetoothCommandResult;
-import amiltone.bsaugues.bluetoothapp.presentation.ui.view.MainView;
+import amiltone.bsaugues.bluetoothapp.data.repository.ContentRepository;
+import amiltone.bsaugues.bluetoothapp.presentation.view.viewinterface.MainView;
 import rx.Subscriber;
+import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
@@ -28,6 +29,10 @@ public class ActivityPresenter {
 
     private List<BluetoothDevice> bluetoothDevices;
 
+    private Subscription discoverBluetoothDevice;
+    private Subscription listenBluetoothDevice;
+
+
     public ActivityPresenter() {
         contentRepository = BluetoothApplication.getInstance().getContentRepository();
         bluetoothDevices = new ArrayList<>();
@@ -37,7 +42,7 @@ public class ActivityPresenter {
         this.mainView = mainView;
     }
 
-    public void activateBluetooth() {
+    private void activateBluetooth() {
         contentRepository.isBluetoothEnabled().subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<Boolean>() {
@@ -54,21 +59,29 @@ public class ActivityPresenter {
                     @Override
                     public void onNext(Boolean success) {
                         if (success) {
-                            Log.d(TAG, "isBluetoothEnabled onNext: the bluetooth is enabled");
-                            discoverBluetoothDevice();
+                            Log.d(TAG, "isBluetoothEnabled onNext: bluetooth is enabled");
+                            if (!isDeviceConnected()) {
+                                mainView.hideConnectedButtons();
+                                discoverBluetoothDevice();
+                            } else {
+                                Log.d(TAG, "isBluetoothEnabled onNext: we are already connected to a device");
+                                mainView.displayConnectedDeviceInfo(getCurrentDeviceName(), getCurrentDeviceAddress());
+                            }
                         } else {
-                            Log.d(TAG, "isBluetoothEnabled onNext: the bluetooth is disabled");
+                            Log.d(TAG, "isBluetoothEnabled onNext: bluetooth disabled");
                             contentRepository.enableBluetooth();
+                            discoverBluetoothDevice();
                         }
-
                     }
                 });
     }
 
     public void discoverBluetoothDevice() {
-        contentRepository.discoverBluetoothDevice().subscribeOn(Schedulers.io())
+        Log.d(TAG, "discoverBluetoothDevice : start discovering");
+        discoverBluetoothDevice = contentRepository.discoverBluetoothDevice().subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<BluetoothDevice>() {
+
                     @Override
                     public void onCompleted() {
                         stopDeviceDiscovery();
@@ -82,31 +95,54 @@ public class ActivityPresenter {
 
                     @Override
                     public void onNext(BluetoothDevice bluetoothDevice) {
-                        Log.d(TAG, "discoverBluetoothDevice onNext: " + bluetoothDevice.getAddress());
+                        Log.d(TAG, "discoverBluetoothDevice onNext: Device discovered : " + bluetoothDevice.getAddress());
 
                         bluetoothDevices.add(bluetoothDevice);
-                        mainView.displayConnectedDeviceInfo(bluetoothDevice);
-
-                        //connectToDevice(bluetoothDevice.getAddress());
+                        mainView.displayDiscoveredDevice(bluetoothDevice);
 
                     }
                 });
     }
 
-    private void stopDeviceDiscovery() {
-        contentRepository.stopDeviceDiscovery();
+    public void stopDeviceDiscovery() {
+        if (!discoverBluetoothDevice.isUnsubscribed()) {
+            discoverBluetoothDevice.unsubscribe();
+            contentRepository.stopDeviceDiscovery();
+        }
+        Log.d(TAG, "stopDeviceDiscovery: stopped the discovery");
     }
 
     public void connectToDevice(String address) {
         contentRepository.connectToDevice(address);
+        if (isDeviceConnected()) {
+            Log.d(TAG, "connectToDevice: connected to device");
+            mainView.displayConnectedDeviceInfo(getCurrentDeviceName(), getCurrentDeviceAddress());
+            mainView.displayConnectedButtons();
+            mainView.hideDiscoveryElements();
+        } else {
+            Log.d(TAG, "connectToDevice: didn't connect to device");
+        }
     }
 
-    public boolean isDeviceConnected() {
+    private boolean isDeviceConnected() {
         return contentRepository.isDeviceConnected();
     }
 
-    public void listenToDevice() {
-        contentRepository.listenToDevice().subscribeOn(Schedulers.io())
+    public void sendCommandToDevice(String command) {
+        if (isDeviceConnected()) {
+            sendCommand(command);
+            listenToDevice();
+        }
+    }
+
+    private void sendCommand(String command) {
+        Log.d(TAG, "sendCommand: Sending a command to the server : " + command);
+        contentRepository.sendCommand(command);
+    }
+
+    private void listenToDevice() {
+        Log.d(TAG, "listenToDevice: listening to the device : ");
+        listenBluetoothDevice = contentRepository.listenToDevice().subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<BluetoothCommandResult>() {
                     @Override
@@ -116,32 +152,29 @@ public class ActivityPresenter {
 
                     @Override
                     public void onError(Throwable e) {
-                        e.printStackTrace();
+                        Log.e(TAG, "listenToDevice onNext: error receiving answer from device", e);
                         stopListenToDevice();
                     }
 
                     @Override
                     public void onNext(BluetoothCommandResult result) {
                         if (result.getResult() == BluetoothCommandResult.Result.SUCCESS) {
-                            Log.d(TAG, "onNext: ");
-                            mainView.displayDiscoveredDevice();
+                            Log.d(TAG, "listenToDevice onNext: Received a GOOD answer from device");
+                            stopListenToDevice();
+                        } else {
+                            Log.d(TAG, "listenToDevice onNext: Received a BAD answer from device");
                         }
                     }
                 });
     }
 
-    public void sendCommand(String command) {
-        if (isDeviceConnected()) {
-            contentRepository.sendCommand(command);
+
+    private void stopListenToDevice() {
+        if (!listenBluetoothDevice.isUnsubscribed()) {
+            listenBluetoothDevice.unsubscribe();
+            contentRepository.stopListenToDevice();
         }
-    }
-
-    public void stopListenToDevice() {
-        contentRepository.stopListenToDevice();
-    }
-
-    public void disconnectFromDevice() {
-        contentRepository.disconnectFromDevice();
+        Log.d(TAG, "stopListenToDevice: stopped the listening");
     }
 
     public void forgetAllBluetoothDevices() {
@@ -155,22 +188,31 @@ public class ActivityPresenter {
 
                     @Override
                     public void onError(Throwable e) {
-
+                        Log.e(TAG, "forgetAllBluetoothDevices onNext: error forgetting all bluetooth devices", e);
                     }
 
                     @Override
                     public void onNext(Boolean success) {
-
+                        if (success) {
+                            Log.d(TAG, "forgetAllBluetoothDevices onNext: forgot all bluetooth devices");
+                        } else {
+                            Log.d(TAG, "forgetAllBluetoothDevices onNext: was not connected to any device");
+                        }
                     }
                 });
     }
 
-    public String getCurrentDeviceAddress() {
+
+    private String getCurrentDeviceAddress() {
         return contentRepository.getCurrentDeviceAddress();
     }
 
-    public String getCurrentDeviceName() {
+    private String getCurrentDeviceName() {
         return contentRepository.getCurrentDeviceName();
+    }
+
+    public void initializeBluetoothConnexion() {
+        activateBluetooth();
     }
 
 

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">BluetoothApp</string>
+    <string name="activity_main_send_data_button">Send Hello to device</string>
+    <string name="activity_main_available_devices">Available devices</string>
+    <string name="activity_main_no_device_connected">No device connected</string>
+    <string name="activity_main_disconnect_the_device">Disconnect the device</string>
 </resources>

@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,8 +27,6 @@ public class IOTBluetoothManager {
     private static final String MY_BLUETOOTH_UUID = "00001101-0000-1000-8000-00805F9B34FB";
 
     private static final long FRAME_LISTENING_INTERVAL_MILLIS = 100;
-    private static final byte CR = (byte) 0x0D;
-    private static final byte LF = (byte) 0x0A;
     private static final byte FRAME_DATA_START = (byte) 0x7E;
     private static final byte DATA_LENGTH_OFFSET = 3;
 
@@ -208,14 +207,6 @@ public class IOTBluetoothManager {
         }
     }
 
-    private int checkDataFrame(int frameStartIndex) throws Exception {
-        int dataLength = frameBuffer.get(frameStartIndex + DATA_LENGTH_OFFSET) & 0xff;
-        if (frameBuffer.get(frameStartIndex + DATA_LENGTH_OFFSET + (dataLength + 1) + 1) == FRAME_DATA_START) {
-            return frameStartIndex + DATA_LENGTH_OFFSET + (dataLength + 1) + 1;
-        } else {
-            throw new Exception();
-        }
-    }
 
     private void resetBuffer() {
         frameBuffer = new ArrayList<>();
@@ -249,37 +240,6 @@ public class IOTBluetoothManager {
 
     public boolean isBluetoothEnabled() {
         return bluetoothAdapter != null && bluetoothAdapter.isEnabled();
-    }
-
-    //Used for testing purposes
-    void listenToDevice(final InputStream inputStream) throws IOException {
-        stopListenToDevice();
-        //We reset the input stream
-        int bytesAvailable = inputStream.available();
-        if (bytesAvailable > 0) {
-            byte[] buffer = new byte[bytesAvailable];
-            inputStream.read(buffer);
-        }
-        frameListeningTimer = new Timer();
-        frameListeningTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-
-                    int bytesAvailable = inputStream.available();
-                    if (bytesAvailable > 0) {
-                        byte[] buffer = new byte[bytesAvailable];
-
-                        inputStream.read(buffer);
-
-                        bluetoothManagerListenToDeviceListener.frameReceived(buffer);
-
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }, 10, 10);
     }
 
 }
